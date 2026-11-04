@@ -1,0 +1,8 @@
+import { useState } from 'react';
+import { normalize, type Student } from '@organotiko/domain';
+import { studentStatusLabels } from './StudentCard';
+export function StudentArchive({rows,onOpen}:{rows:Student[];onOpen:(id:string)=>void}) {
+  const [query,setQuery]=useState(''),[status,setStatus]=useState('archived');
+  const found=rows.filter(r=>r.status!=='active'&&(status==='all'||r.status===status)&&normalize(`${r.surname} ${r.name} ${r.department}`).includes(normalize(query)));
+  return <div><p className="prototype-note">Ξεχωριστή προβολή εκτός καθημερινής εργασίας. Οι καρτέλες διατηρούνται χωρίς διαγραφή προσώπων ή ιστορικού.</p><section className="review-card"><h2>Αρχείο & κατάσταση 0</h2><div className="nucleus-form-row"><label className="form-label">Αναζήτηση στο αρχείο<input value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="form-label">Κατάσταση εγγραφών<select value={status} onChange={e=>setStatus(e.target.value)}><option value="archived">Στο αρχείο</option><option value="zero">Κατάσταση 0</option><option value="all">Και οι δύο καταστάσεις</option></select></label></div><p>{found.length} εγγραφές εκτός καθημερινού πίνακα</p><div className="table-scroll"><table><thead><tr><th>ΕΠΩΝΥΜΟ / ΟΝΟΜΑ</th><th>ΤΜΗΜΑ / ΕΤΟΣ</th><th>ΚΑΤΑΣΤΑΣΗ</th><th>ΚΑΡΤΕΛΑ</th></tr></thead><tbody>{found.map(row=><tr key={row.id}><td>{row.surname} {row.name}</td><td>{row.department} · {row.year}</td><td>{studentStatusLabels[row.status]}</td><td><button onClick={()=>onOpen(row.id)}>Άνοιγμα {row.surname}</button></td></tr>)}</tbody></table>{!found.length&&<div className="empty">Δεν βρέθηκαν εγγραφές.</div>}</div></section></div>;
+}
