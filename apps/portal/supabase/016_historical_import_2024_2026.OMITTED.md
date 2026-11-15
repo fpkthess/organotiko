@@ -1,0 +1,1 @@
+The original historical finance import contains real transaction-level records. Deliberately omitted from this working-code distribution to prevent unnecessary duplication of non-synthetic data. It remains in the user-provided Portal source ZIP and can be restored securely during the audited production migration.

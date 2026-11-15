@@ -1,0 +1,17 @@
+export type Student = {id:string; name:string; surname:string; department:string;university?:string;yearCode:string;nucleus1:string;nucleus2?:string;efRegistered:boolean;member:boolean;bluepass:boolean;cadre?:boolean;phoneCy?:string;phoneGr?:string;entryYear?:string;uniqueNumber?:string;adt?:string;notes?:string};
+export declare const REGISTRATION_SOURCES: readonly string[];
+export declare const INTENT_CODES: readonly string[];
+export declare const EVENT_KINDS: readonly string[];
+export declare function isActualSource(value:unknown):boolean;
+export declare function isIntent(value:unknown):boolean;
+export declare function assertRegistration(v:{source:string;date:string;schoolYear:string}):{source:string;date:string;schoolYear:string};
+export declare function registerEfekth<T extends {id:string;yearCode:string;efRegistered:boolean}>(s:T, v:{source:string;date:string;schoolYear:string}):{student:T;event:{kind:string;source:string;date:string;schoolYear:string;yearAtEvent:string;studentId:string};yearly:{schoolYear:string;registrationSource:string;intentCode:string}};
+export declare function setAnnualIntent<T extends {registrationSource?:string|null;intentCode?:string}>(v:T,code:string):T;
+export declare function nextStudyYear(code:string,duration?:number|null):{next:string;review:boolean;reason:string};
+export declare function previewAnnualUpgrade(students:Student[],v:{from:string;to:string;durations?:Record<string,number>}):Array<{id:string;person:string;from:string;to:string;review:boolean;reason:string;efRegisteredBefore:boolean;efRegisteredAfter:boolean;annualRecord:unknown}>;
+export declare function normalized(value:unknown):string;
+export declare function matchesFilters<T extends object>(p:T, filters:Array<{field:keyof T;values:string[]}>):boolean;
+export declare function summarizeBy<T extends object>(data:T[],dims:Array<keyof T>):{label:string;count:number}[];
+export declare function freezeSession(ids:string[],filterSnapshot:unknown):{studentIds:string[];filterSnapshot:unknown;reviewed:string[];status:string};
+export declare function reviewSessionRow(session:{studentIds:string[];reviewed:string[];status:string;filterSnapshot:unknown},id:string):typeof session;
+export declare function makeSyntheticStudents(count?:number):Student[];

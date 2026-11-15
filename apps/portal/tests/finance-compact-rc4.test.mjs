@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import {strict as assert} from 'node:assert';
+import {readFileSync} from 'node:fs';
+const file=(p)=>readFileSync(new URL(p,import.meta.url),'utf8');
+const page=file('../src/FinancePage.tsx');
+const sql=file('../supabase/014_register_first_payment_compact.sql');
+test('New income/expense use shared short dialog',()=>{assert.match(page,/finance-modal-compact/);assert.match(page,/finance-form-grid/);assert.match(page,/finance-optional-details/);});
+test('New entry defaults date to today and labels first movement',()=>{assert.match(page,/setDate\(today\(\)\)/);assert.match(page,/Ημερομηνία πρώτης κίνησης/);assert.match(page,/Πρώτο ποσό/);});
+test('Register and optional first payment go through atomic RPC',()=>{assert.match(page,/finance_create_register_with_first_payment/);assert.match(sql,/public.finance_new_register/);assert.match(sql,/public.finance_post/);assert.match(sql,/PERFORM public.finance_check/);});
+test('No misleading first-payment date without amount and account',()=>{assert.match(page,/p_date:firstAmount===null\?null:date/);assert.match(page,/p_account:firstAmount===null\?null:account/);assert.match(page,/Η ημερομηνία αφορά την κίνηση/);});
+test('Only authenticated can invoke RC4 database function',()=>{assert.match(sql,/REVOKE ALL ON FUNCTION public.finance_create_register_with_first_payment[\s\S]*FROM PUBLIC,anon/);assert.match(sql,/GRANT EXECUTE ON FUNCTION public.finance_create_register_with_first_payment[\s\S]*TO authenticated/);});

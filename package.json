@@ -1,1 +1,15 @@
-{"name":"organotiko","private":true,"version":"0.1.0","type":"module","workspaces":["apps/*","packages/*"],"scripts":{"dev":"vite --config apps/organotiko/vite.config.ts","build":"tsc --noEmit && vite build --config apps/organotiko/vite.config.ts","test":"node --experimental-strip-types --test tests/*.test.ts"},"dependencies":{"@supabase/supabase-js":"2.119.0","lucide-react":"^0.468.0","react":"^19.1.0","react-dom":"^19.1.0"},"devDependencies":{"@types/react":"^19.1.0","@types/react-dom":"^19.1.0","@vitejs/plugin-react":"^5.0.0","supabase":"3.0.0","typescript":"^5.9.0","vite":"^7.1.0"}}
+{
+  "name": "organotiko-platform",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": ["apps/organotiko", "packages/domain"],
+  "scripts": {
+    "dev": "npm run dev -w @organotiko/app",
+    "build": "npm run build -w @organotiko/app",
+    "test": "node --test packages/domain/*.test.mjs",
+    "typecheck": "npm run typecheck -w @organotiko/app",
+    "check": "npm run test && npm run build"
+  },
+  "engines": {"node": ">=22"}
+}

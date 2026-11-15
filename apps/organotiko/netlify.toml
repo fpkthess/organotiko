@@ -1,0 +1,15 @@
+# Netlify project configuration for the monorepo site apps/organotiko.
+# Netlify "Base directory": leave blank (repository root).
+# Netlify "Package directory": apps/organotiko.
+# npm workspaces are installed from the repository root.
+[build]
+  command = "npm run build -w @organotiko/app"
+  publish = "apps/organotiko/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
