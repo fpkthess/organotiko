@@ -5,6 +5,7 @@ const key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
 export const connected=Boolean(url&&key);
 export const supabase:SupabaseClient|null=connected?createClient(url!,key!,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}}):null;
 export type DbStudent=Student & {personVersion:number;studentVersion:number;studentRowId:string;status:string};
+export type RegistrationEventEntry={id:string;studentId:string;year:string;source:string;date:string;studentYearAtRegistration:string};
 type DbRow={id:string;name:string;surname:string;version?:number;organotiko_students?:Array<{id:string;department:string|null;year_code:string|null;ef_registered:boolean|null;notes:string|null;status:string;version?:number;university?:string|null;phone_cy?:string|null;phone_gr?:string|null;entry_year?:string|null;unique_number?:string|null;adt?:string|null;member?:boolean|null;bluepass?:boolean|null;cadre?:boolean|null;nucleus2?:string|null}>};
 
 export async function loadStudents():Promise<DbStudent[]> {
@@ -27,6 +28,10 @@ export async function loadStudents():Promise<DbStudent[]> {
 export async function saveStudentField(s:DbStudent,key:keyof Student,value:string|boolean):Promise<{personVersion:number;studentVersion:number}> {
  if(!supabase)throw Error('Δεν έχει συνδεθεί η βάση.');
  if(key==='efRegistered'||key==='member'||key==='bluepass')throw Error('Αυτή η ιδιότητα αλλάζει μόνο με επιβεβαιωμένη ειδική διαδικασία.');
+ if(key==='nucleus1'){
+  await setPrimaryNucleus(s,String(value));
+  return {personVersion:s.personVersion,studentVersion:s.studentVersion};
+ }
  if(key==='name'||key==='surname'){
   const {data,error}=await supabase.from('organotiko_people').update({[key]:value}).eq('id',s.id).eq('version',s.personVersion).select('version').maybeSingle();
   if(error)throw error;
@@ -54,5 +59,47 @@ export async function createStudent(row:{name:string;surname:string;department?:
 export async function registerStudent(s:DbStudent,schoolYear:string,source:string,date:string):Promise<void>{
  if(!supabase)throw Error('Δεν έχει συνδεθεί η βάση.');
  const {error}=await supabase.rpc('organotiko_register_efekth',{p_student_id:s.studentRowId,p_school_year:schoolYear,p_source:source,p_registered_on:date});
+ if(error)throw error;
+}
+
+/** Related annual and historic event records; uses the existing protected read policies. */
+export async function loadHistoricData(students:DbStudent[]):Promise<{
+ annual:import('./model').AnnualMap;events:import('./model').EventMap;registrations:RegistrationEventEntry[];
+}> {
+ if(!supabase)throw Error('Δεν έχει συνδεθεί η βάση.');
+ const [yearsResult, yearlyResult, eventsCatalogResult, eventRowsResult, assignsResult,nucleiResult,registrationEventsResult]=await Promise.all([
+  supabase.from('organotiko_academic_years').select('id,code').limit(100),
+  supabase.from('organotiko_yearly_records').select('student_id,year_id,intent_code,registration_source,registered_on').limit(10000),
+  supabase.from('organotiko_event_catalog').select('id,title').limit(500),
+  supabase.from('organotiko_event_records').select('student_id,event_id,intent,actual').limit(10000),
+  supabase.from('organotiko_student_assignments').select('student_id,nucleus_id,kind,ended_at').is('ended_at',null).limit(5000),
+  supabase.from('organotiko_nuclei').select('id,name').limit(500),
+  supabase.from('organotiko_registration_events').select('id,student_id,year_id,source,registered_on,year_code_at_event').limit(20000)
+ ]);
+ for(const r of [yearsResult,yearlyResult,eventsCatalogResult,eventRowsResult,assignsResult,nucleiResult,registrationEventsResult])if(r.error)throw r.error;
+ const personByStudent=new Map(students.map(s=>[s.studentRowId,s.id]));
+ const yearById=new Map<string,string>(((yearsResult.data??[]) as Array<{id:string;code:string}>).map(y=>[y.id,y.code]));
+ const eventById=new Map<string,string>(((eventsCatalogResult.data??[]) as Array<{id:string;title:string}>).map(e=>[e.id,e.title]));
+ const annual:import('./model').AnnualMap={};const events:import('./model').EventMap={};
+ for(const item of yearlyResult.data??[]){const person=personByStudent.get(item.student_id),year=yearById.get(item.year_id);if(person&&year)annual[`${person}|${year}`]={intentCode:item.intent_code||'',registrationSource:item.registration_source??null,registeredOn:item.registered_on??null}}
+ for(const item of eventRowsResult.data??[]){const person=personByStudent.get(item.student_id),title=eventById.get(item.event_id);if(person&&title){events[person]??={};events[person][title]={intent:item.intent??'',actual:item.actual??''}}}
+ const nucleusById=new Map<string,string>(((nucleiResult.data??[]) as Array<{id:string;name:string}>).map(n=>[n.id,n.name]));
+ for(const assignment of assignsResult.data??[]){if(assignment.kind!=='primary')continue;const person=personByStudent.get(assignment.student_id);if(!person)continue;const s=students.find(x=>x.id===person);if(s)s.nucleus1=nucleusById.get(assignment.nucleus_id)??'';}
+ const registrations:RegistrationEventEntry[]=(registrationEventsResult.data??[]).flatMap(r=>{const studentId=personByStudent.get(r.student_id),year=yearById.get(r.year_id);return studentId&&year?[{id:r.id,studentId,year,source:r.source,date:r.registered_on,studentYearAtRegistration:r.year_code_at_event||'—'}]:[]});
+ return {annual,events,registrations};
+}
+export async function setAnnualIntent(student:DbStudent,year:string,value:string):Promise<void>{
+ if(!supabase)throw Error('Δεν υπάρχει βάση');
+ const {error}=await supabase.rpc('organotiko_set_annual_intent',{p_student_id:student.studentRowId,p_school_year:year,p_intent:value});
+ if(error)throw error;
+}
+export async function setHistoryEvent(student:DbStudent,eventCode:string,which:'intent'|'actual',value:string):Promise<void>{
+ if(!supabase)throw Error('Δεν υπάρχει βάση');
+ const {error}=await supabase.rpc('organotiko_set_event_value',{p_student_id:student.studentRowId,p_event_code:eventCode,p_which:which,p_value:value});
+ if(error)throw error;
+}
+export async function setPrimaryNucleus(student:DbStudent,nucleusName:string):Promise<void>{
+ if(!supabase)throw Error('Δεν υπάρχει βάση');
+ const {error}=await supabase.rpc('organotiko_set_primary_nucleus',{p_student_id:student.studentRowId,p_nucleus_name:nucleusName});
  if(error)throw error;
 }

@@ -1,0 +1,27 @@
+name: Organotiko checks
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    paths:
+      - 'apps/organotiko/**'
+      - 'packages/domain/**'
+      - 'package.json'
+      - '.github/workflows/organotiko-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Until package-lock.json can be generated and reviewed,
+      # use npm install. Switch to npm ci once the lockfile is committed.
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
