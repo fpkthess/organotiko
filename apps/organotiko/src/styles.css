@@ -243,3 +243,24 @@ button:hover:not(:disabled){border-color:#cbd9e8}
 .column-presets{padding-top:10px}
 .column-presets button{font-size:11px;min-height:30px;background:#eef5ff;border-color:#d4e5f6;color:#285984}
 .table-workspace:fullscreen .fullscreen-label{display:inline}
+
+/* Full-window TABLE mode, not the browser Fullscreen API.
+   Native fullscreen hides App-level dialogs (EF registration, student forms) because
+   they are siblings of the fullscreen element. Here dialogs remain above the table. */
+.table-workspace.table-fullscreen-mode {
+ position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;
+ max-height:100vh!important;z-index:72!important;border:0!important;
+ border-radius:0!important;background:white!important;display:flex!important;
+ flex-direction:column!important;overflow:hidden!important;
+}
+.table-workspace.table-fullscreen-mode .sheet-scroll{
+ min-height:100px!important;max-height:none!important;flex:1 1 auto!important;overflow:auto!important;
+}
+.table-workspace.table-fullscreen-mode .table-top-toolbar,
+.table-workspace.table-fullscreen-mode .table-new-record,
+.table-workspace.table-fullscreen-mode .sheet-footer {flex:0 0 auto}
+.table-fullscreen-mode~.modal-wrap{z-index:100}
+/* All App-level dialogs and profile drawers remain visible above the maximized sheet. */
+.modal-wrap {z-index:110!important}
+/* Keep the student profile accessible over the maximized table too. */
+.drawer-screen { z-index:105!important; }

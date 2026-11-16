@@ -1,21 +1,25 @@
-# ORGANOTIKO v0.4 — Εφαρμογή patch πάνω στο υπάρχον GitHub repository
+# ORGANOTIKO UPDATE v0.5 — οδηγίες εφαρμογής σε GitHub main
 
-Αυτό είναι **patch**, όχι αντικατάσταση ολόκληρου repository.
+**Patch αρχείων, όχι νέο repository**. Δεν περιέχει `package-lock.json`, `.git`, `.env` ή πραγματικές εγγραφές.
 
-1. Κράτησε αντίγραφο των τωρινών αρχείων ή βεβαιώσου ότι το `main` έχει γίνει commit/push.
-2. Άνοιξε **GitHub Desktop → organotiko → Repository → Show in Finder**.
-3. Αποσυμπίεσε το πακέτο `ORGANOTIKO_UPDATE_v0.4.zip`.
-4. **Ασφαλέστερη μέθοδος στον Mac:** Από GitHub Desktop επίλεξε `Repository → Open in Terminal` (βρίσκεσαι ήδη στον φάκελο `organotiko`). Αν το ZIP αποσυμπιέστηκε στο `~/Downloads/ORGANOTIKO_UPDATE_v0.4`, εκτέλεσε `ditto ~/Downloads/ORGANOTIKO_UPDATE_v0.4 .` (το τελικό `.` σημαίνει «εδώ»). Το `ditto` συγχωνεύει τους φακέλους και αντικαθιστά μόνο τα ίδια αρχεία, χωρίς να διαγράφει τα υπόλοιπα. Αν το αρχείο βρίσκεται αλλού, προσαρμόζεις τη διαδρομή.
-5. **Μην διαγράψεις** άλλα αρχεία και **μην αντικαταστήσεις ολόκληρους φακέλους μέσω Finder**. **Ποτέ** μην διαγράψεις `.git`, `package-lock.json`, `.env*`, ή κάποια πραγματική βάση. Το patch δεν περιέχει τέτοια αρχεία.
-6. Στο ίδιο Terminal εκτέλεσε `npm install`, `npm test`, `npm run build`. Αν αποτύχει κάποιο βήμα, μη στείλεις push — κράτησε τα logs.
-7. Στο GitHub Desktop: δες τις αλλαγές → Commit στο `main` → Push origin. Το Netlify, που ήδη παρακολουθεί `main`, θα ξεκινήσει αυτόματα build.
+1. Βεβαιώσου ότι οι τωρινές αλλαγές στο GitHub Desktop είναι αποθηκευμένες με Commit και Push.
+2. Κατέβασε το `ORGANOTIKO_UPDATE_v0.5.zip` στον φάκελο Downloads του Mac.
+3. Στο **GitHub Desktop → organotiko → Repository → Open in Terminal** βρίσκεσαι στη ρίζα του repository.
+4. Εκτέλεσε:
 
-## Supabase
+   ```sh
+   ditto -x -k ~/Downloads/ORGANOTIKO_UPDATE_v0.5.zip .
+   npm install
+   npm test
+   node --test tests/fullscreen-ui.test.mjs
+   npm run build
+   ```
 
-Οι migrations `20261116135406_organotiko_v04_history_intent_and_registration.sql` και `20261116135426_organotiko_v04_nucleus_assignments_rpc.sql` **έχουν ήδη εφαρμοστεί** στο project `organotiko` από τη συνομιλία. **Μην τις εκτελέσεις ξανά χειροκίνητα.** Στο GitHub μπαίνουν για να υπάρχουν ως μέρος του version control.
+5. Αν ΟΛΕΣ οι εντολές περάσουν, επέστρεψε στο GitHub Desktop, έλεγξε τις αλλαγές, Commit στο `main` και Push origin. Το Netlify θα χτίσει αυτόματα.
+6. Στο Netlify επιβεβαίωσε χειροκίνητα: Πίνακας → Πλήρης οθόνη → tick ΕΦΕΚΘ → εμφανίζεται η φόρμα, μπορείς να την ακυρώσεις, και το κουμπί εξόδου από πλήρη οθόνη λειτουργεί. Δοκίμασε και την καρτέλα φοιτητή σε fullscreen.
 
-## Τι δεν έχει γίνει
+**Μην εφαρμόσεις νέες SQL migrations**: η v0.5 δεν περιλαμβάνει αλλαγές στη βάση. Δεν αλλάζουμε Cloudflare/domain ή το παραγωγικό Portal.
 
-Το patch **δεν** έχει ανέβει αυτόματα στο GitHub ή στο Netlify. Δεν κατέστη εφικτός πλήρης έλεγχος του Vite build σε αυτή τη συνεδρία λόγω αδυναμίας εγκατάστασης npm dependencies. Δεν ολοκληρώθηκε ενσωμάτωση λειτουργιών Portal, κοινά multiuser settings/reports, εκλογικό σύστημα, τελικές αναλύσεις NUMERA και πλήρης συνεδρίαση Οργανωτικού. Δεν πειράχτηκε το production Portal ή το Cloudflare.
+Η σωστή ένταξη του υπάρχοντος συστήματος Μελών/Bluepass έχει μείνει σε εκκρεμότητα μέχρι να επιθεωρηθεί το αρχικό ZIP/DB/schema.
 
-Αναλυτικά: `docs/RELEASE_v0.4.md` και `docs/FEATURE_REGISTRY.md` στο υπάρχον project.
+Αναλυτική περιγραφή: `docs/RELEASE_v0.5.md`.

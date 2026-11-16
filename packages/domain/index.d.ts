@@ -15,3 +15,8 @@ export declare function summarizeBy<T extends object>(data:T[],dims:Array<keyof 
 export declare function freezeSession(ids:string[],filterSnapshot:unknown):{studentIds:string[];filterSnapshot:unknown;reviewed:string[];status:string};
 export declare function reviewSessionRow(session:{studentIds:string[];reviewed:string[];status:string;filterSnapshot:unknown},id:string):typeof session;
 export declare function makeSyntheticStudents(count?:number):Student[];
+
+export type SchoolProgrammeRule = {kind:'undergraduate'|'masters'|'iek';duration?:number;verified:boolean;annualReview?:boolean};
+export declare function programKey(university:string,department:string):string;
+export declare function previewAnnualUpgradeReviewed(students:Student[],options:{from:string;to:string;programs:Record<string,SchoolProgrammeRule>}):Array<{id:string;person:string;from:string;to:string;university:string;department:string;review:boolean;blocked:boolean;reason:string;efRegisteredBefore:boolean;efRegisteredAfter:boolean}>;
+export declare function proposeSourceMatches(students:Student[],external:Array<{sourceId:string;sourceSystem:'members'|'bluepass';name:string;surname:string;phone?:string}>):Array<{sourceId:string;sourceSystem:string;candidates:Array<{studentId:string;surname:string;name:string;score:number;sameName:boolean;samePhone:boolean}>;state:string}>;

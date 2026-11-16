@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import type {FormEvent,ReactNode} from 'react';
-import {Activity,ArrowRight,BarChart3,BookOpen,CalendarDays,CheckCircle2,ChevronLeft,ChevronRight,ClipboardList,Columns3,FileText,HandCoins,LayoutDashboard,LogOut,Mail,Menu,MessageSquare,Plus,RefreshCw,Search,Settings,ShieldCheck,Ticket,Users,UserRoundPlus, X} from 'lucide-react';
+import {Activity,ArrowRight,BarChart3,BookOpen,CalendarDays,CheckCircle2,ChevronLeft,ChevronRight,ClipboardList,Columns3,FileText,HandCoins,LayoutDashboard,LogOut,Mail,Menu,MessageSquare,Plus,RefreshCw,Search,Settings,ShieldCheck,Ticket,Users,Link2,UserRoundPlus, X} from 'lucide-react';
 import type {Student} from '@organotiko/domain';
 import {makeSyntheticStudents,assertRegistration,registerEfekth,REGISTRATION_SOURCES,freezeSession} from '@organotiko/domain';
 import {connected,supabase,loadStudents,loadHistoricData,saveStudentField,registerStudent,createStudent,setAnnualIntent,setHistoryEvent} from './backend';
@@ -15,11 +15,12 @@ import AnalyticsWorkspace from './AnalyticsWorkspace';
 import ReportsWorkspace from './ReportsWorkspace';
 import NucleiWorkspace from './NucleiWorkspace';
 import SettingsWorkspace,{formOptions,getConfig} from './SettingsWorkspace';
+import MembershipWorkspace from './MembershipWorkspace';
 
-type Screen='home'|'table'|'search'|'analytics'|'nuclei'|'sessions'|'reports'|'settings'|'portal-overview'|'portal-teams'|'portal-events'|'portal-finance'|'portal-sms'|'portal-offers'|'portal-newsletter';
+type Screen='home'|'table'|'search'|'analytics'|'members'|'bluepass'|'matching'|'nuclei'|'sessions'|'reports'|'settings'|'portal-overview'|'portal-teams'|'portal-events'|'portal-finance'|'portal-sms'|'portal-offers'|'portal-newsletter';
 type Item={id:Screen;title:string;icon:ReactNode};
 const basic:Item[]=[{id:'home',title:'Αρχική',icon:<LayoutDashboard size={18}/>},{id:'table',title:'Πίνακας',icon:<Columns3 size={18}/>},{id:'search',title:'Αναζήτηση',icon:<Search size={18}/>},{id:'analytics',title:'Analytics',icon:<BarChart3 size={18}/>}];
-const management:Item[]=[{id:'nuclei',title:'Πυρήνες',icon:<Users size={18}/>},{id:'sessions',title:'Συνεδριάσεις Οργανωτικού',icon:<CalendarDays size={18}/>},{id:'reports',title:'Αναφορές',icon:<FileText size={18}/>}];
+const management:Item[]=[{id:'nuclei',title:'Πυρήνες',icon:<Users size={18}/>},{id:'sessions',title:'Συνεδριάσεις Οργανωτικού',icon:<CalendarDays size={18}/>},{id:'reports',title:'Αναφορές',icon:<FileText size={18}/>},{id:'members',title:'Μέλη',icon:<Users size={18}/>},{id:'bluepass',title:'Bluepass',icon:<Ticket size={18}/>},{id:'matching',title:'Αντιστοίχιση εγγραφών',icon:<Link2 size={18}/>}];
 const portal:Item[]=[{id:'portal-overview',title:'Επισκόπηση Portal',icon:<BookOpen size={18}/>},{id:'portal-teams',title:'Ομάδες & Εργασίες',icon:<ClipboardList size={18}/>},{id:'portal-events',title:'Εκδηλώσεις',icon:<CalendarDays size={18}/>},{id:'portal-finance',title:'Οικονομικά',icon:<HandCoins size={18}/>},{id:'portal-sms',title:'SMS',icon:<MessageSquare size={18}/>},{id:'portal-offers',title:'Προσφορές',icon:<Ticket size={18}/>},{id:'portal-newsletter',title:'Newsletter',icon:<Mail size={18}/>}];
 const settingsItem:Item={id:'settings',title:'Ρυθμίσεις',icon:<Settings size={18}/>};
 const allItems=[...basic,...management,...portal,settingsItem];
@@ -75,6 +76,7 @@ export default function App(){
  {screen==='search'&&<SearchWorkspace students={students} onProfile={setProfile}/>}
  {screen==='analytics'&&<AnalyticsWorkspace students={students} annual={annual} registrations={registrations} academicYear={academicYear} connected={connected}/>}
  {screen==='nuclei'&&<NucleiWorkspace students={students}/>}
+ {['members','bluepass','matching'].includes(screen)&&<MembershipWorkspace mode={screen as 'members'|'bluepass'|'matching'} students={students} onProfile={setProfile} onNavigate={navigate}/>}
  {screen==='reports'&&<ReportsWorkspace students={students}/>}
  {screen==='settings'&&<SettingsWorkspace students={students} year={academicYear} setYear={setAcademicYear} formFields={formFields} setFormFields={setFormFields} connected={connected}/>}
  {screen==='sessions'&&<section className="panel page-padding"><div className="row space wrap"><h2>Συνεδριάσεις Οργανωτικού</h2><span className="muted small">Πίνακας σταθερής λίστας · μία συνεδρίαση κάθε φορά</span></div>{meeting?<div className="stack"><div className="row space"><strong>{meeting.studentIds.length} εγγραφές στη λίστα</strong><span>{meeting.reviewed.length}/{meeting.studentIds.length} εξετάστηκαν</span></div><div className="row"><button onClick={()=>setMeeting(m=>m?{...m,status:m.status==='active'?'paused':'active'}:m)}>{meeting.status==='active'?'Παύση':'Συνέχεια'}</button><button onClick={()=>{if(window.confirm('Ολοκλήρωση συνεδρίασης;'))setMeeting(m=>m?{...m,status:'completed'}:m)}}>Ολοκλήρωση</button></div><table className="detail-table full-width"><thead><tr><th>Φοιτητής</th><th>ΕΤΟΣ</th><th>ΠΥΡΗΝΑΣ1</th><th>Κατάσταση</th></tr></thead><tbody>{meeting.studentIds.slice(0,125).map(id=>{const s=students.find(x=>x.id===id);return s?<tr key={id}><td><button onClick={()=>setProfile(s)}>{s.surname} {s.name}</button></td><td>{s.yearCode}</td><td>{s.nucleus1}</td><td>{meeting.reviewed.includes(id)?'Εξετάστηκε':'Εκκρεμεί'}</td></tr>:null})}</tbody></table></div>:<div className="stack"><p>Δημιούργησε προσχέδιο από τα φίλτρα του κεντρικού πίνακα.</p>{meetingDraft&&<><strong>{meetingDraft.ids.length} εγγραφές στο προσχέδιο</strong><button className="primary" style={{alignSelf:'flex-start'}} onClick={()=>setMeeting({...freezeSession(meetingDraft.ids,meetingDraft.filters),status:'active'})}>Έναρξη συνεδρίασης</button></>}</div>}<p className="muted small">Ο πλήρως επεξεργάσιμος πίνακας συνεδριάσεων, το αποκλειστικό lock χειριστή, η αποθήκευση προόδου και οι συγκριτικές αναφορές παραμένουν υπό ανάπτυξη.</p></section>}

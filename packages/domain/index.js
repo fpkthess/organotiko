@@ -36,14 +36,16 @@ export function setAnnualIntent(row, code) {
 export function nextStudyYear(code, duration = null) {
   const y=String(code??'').toUpperCase().trim();
   if (!y || y==='0' || y==='Π') return {next:y,review:false,reason:'unchanged'};
-  if (/^Ν\d+$/.test(y)) return {next:`Ν${Number(y.slice(1))+1}`,review:false,reason:'extended'};
-  if (y==='91') return {next:'92',review:false,reason:'masters'};
+  if (/^Ν\d+$/.test(y)) return {next:`Ν${Number(y.slice(1))+1}`,review:true,reason:'extended_year_review'};
+  if (y==='9') return {next:'91',review:true,reason:'masters_year_review'};
+  if (y==='91') return {next:'92',review:true,reason:'masters_year_review'};
   if (y==='92') return {next:'92',review:true,reason:'masters_completion_review'};
   if (/^\d+$/.test(y)) {
     const n=Number(y);
     if (n>=1 && n<=9) {
-      if (Number.isInteger(duration) && duration>=1 && n>=duration) return {next:'Ν1',review:false,reason:'extended'};
-      return {next:String(n+1),review:!duration,reason:!duration?'unknown_course_duration':'regular'};
+      if (Number.isInteger(duration) && duration>=1 && n>=duration) return {next:'Ν1',review:true,reason:'end_of_nominal_duration'};
+      const next=String(n+1).padStart(y.length===2?2:1,'0');
+      return {next,review:!duration,reason:!duration?'unknown_course_duration':'regular'};
     }
   }
   return {next:y,review:true,reason:'nonstandard_code'};
@@ -59,6 +61,65 @@ export function previewAnnualUpgrade(students, {from,to,durations = {}}) {
       review:proposal.review,reason:proposal.reason,efRegisteredBefore:s.efRegistered,
       efRegisteredAfter:s.efRegistered,annualRecord:{schoolYear:to,intentCode:'',registrationSource:null,events:{ΑΓΣ:{intent:'',actual:''},ΒΓΣ:{intent:'',actual:''},ΕΚΛ:{intent:'',actual:''}}}};
   });
+}
+
+/** School-specific annual audit. No operation in this function writes student records.
+ * Catalog MUST be verified by an Organotikos; never assume every programme is 4 years.
+ * programme keys include university AND department so same department labels cannot collide.
+ */
+export function programKey(university, department) {
+  return `${normalized(university)}|${normalized(department)}`;
+}
+export function previewAnnualUpgradeReviewed(students,{from,to,programs={}}) {
+  if (!/^\d{4}-\d{2}$/.test(from)||!/^\d{4}-\d{2}$/.test(to)||
+      Number(to.slice(0,4))!==Number(from.slice(0,4))+1 ||
+      Number(to.slice(5))!==((Number(from.slice(5))+1)%100))
+    throw new Error('Η αναβάθμιση απαιτεί ακριβώς το επόμενο ακαδημαϊκό έτος.');
+  return students.map(student=>{
+    const key=programKey(student.university,student.department);
+    const rule=programs[key];
+    const kind=rule?.kind||'';
+    const duration=Number(rule?.duration);
+    const verified=Boolean(rule?.verified)&&['undergraduate','masters','iek'].includes(kind)&&
+      (kind==='undergraduate'?Number.isInteger(duration)&&duration>=2&&duration<=8:true);
+    const code=String(student.yearCode??'').toUpperCase().trim();
+    const graduated=code==='0',honorary=code==='Π';
+    if(graduated||honorary)return {...student,id:student.id,person:`${student.surname} ${student.name}`,
+      from:code,to:code,university:student.university||'',department:student.department||'',
+      review:false,blocked:false,reason:graduated?'graduate_unchanged':'honorary_unchanged',
+      efRegisteredBefore:student.efRegistered,efRegisteredAfter:student.efRegistered};
+    // An unknown or unverified programme must not invent the advancement rule.
+    if(!verified)return {id:student.id,person:`${student.surname} ${student.name}`,
+      from:code,to:code,university:student.university||'',department:student.department||'',
+      review:true,blocked:true,reason:'unverified_school',
+      efRegisteredBefore:student.efRegistered,efRegisteredAfter:student.efRegistered};
+    const ruleDuration=kind==='undergraduate'?duration:null;
+    const proposal=nextStudyYear(code,ruleDuration);
+    const mustReview=kind!=='undergraduate'||proposal.review||Boolean(rule.annualReview);
+    const reason=kind==='iek'?'iek_annual_review':kind==='masters'?'masters_annual_review':proposal.reason;
+    return {id:student.id,person:`${student.surname} ${student.name}`,from:code,to:proposal.next,
+      university:student.university||'',department:student.department||'',
+      review:mustReview,blocked:false,reason,
+      efRegisteredBefore:student.efRegistered,efRegisteredAfter:student.efRegistered};
+  });
+}
+/** Deterministic proposed matches only. No status changes or automatic linking. */
+export function proposeSourceMatches(students,external){
+ const normalizedPhone=v=>String(v??'').replace(/[^0-9]/g,'');
+ return external.map(source=>{
+  const full=`${normalized(source.surname)} ${normalized(source.name)}`.trim();
+  const phone=normalizedPhone(source.phone);
+  const candidates=students.flatMap(s=>{
+    const studentFull=`${normalized(s.surname)} ${normalized(s.name)}`.trim();
+    const sameName=full.length>2&&full===studentFull;
+    const samePhone=phone.length>=8&&[s.phoneCy,s.phoneGr].some(p=>normalizedPhone(p)===phone);
+    if(!sameName&&!samePhone)return [];
+    return [{studentId:s.id,surname:s.surname,name:s.name,
+      sameName,samePhone,score:Number(sameName)*2+Number(samePhone)}];
+  }).sort((a,b)=>b.score-a.score||a.surname.localeCompare(b.surname,'el'));
+  return {sourceId:source.sourceId,sourceSystem:source.sourceSystem,candidates,
+    state:candidates.length?'needs_manual_review':'unmatched'};
+ });
 }
 
 export function normalized(value) {return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleUpperCase('el-GR').trim();}
